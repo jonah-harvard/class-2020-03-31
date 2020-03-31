@@ -39,15 +39,34 @@ county <- read_rds("county.rds")
 
 We are interested in understanding how poverty is correlated with (and influenced by?) education.
 
+```{r}
+skim(county)
+```
+
 
 # Scene 2
 
 **Prompt** Let’s start by exploring our numerical outcome variable `poverty` and our numerical explanatory variable `less_than_hs`. What is the average poverty rate in the US? How does this compare with that of your county (if you are not from US look up Middlesex County - the county that Cambridge, MA is in)? Furthermore, what is the average percentage of adults without a high school diploma? Which state's county has the highest percentage of adults without a high school diploma?
 
 
+```{r}
+county %>% summarize(cor = cor(poverty, less_than_hs))
+```
+
+
 # Scene 3
 
 **Prompt:** What is the correlation coefficient of `poverty` and `less_than_hs`? What does it mean? What does it suggest about the relation between the percent of the population in poverty in 2018 and the percent of the population with less than a high school degree in 2014? 
+```{r}
+p <- county %>%
+  mutate(
+    region = as_factor(region)
+  ) %>% 
+  ggplot(aes(poverty, less_than_hs, color = region)) + geom_point() +
+  geom_smooth(method = "lm", se=FALSE)
+
+p
+```
 
 
 # Scene 4
@@ -60,6 +79,17 @@ We are interested in understanding how poverty is correlated with (and influence
 **Prompt** Create an animation of the scatterplot above with the percent of adults with less than a high school diploma on the x axis and the poverty rate in the y axis. This scatterplot should transition through the four US regions. Hint: Read the [Animation appendix](https://davidkane9.github.io/PPBDS/C-animation.html) of the *[Primer](https://davidkane9.github.io/PPBDS/)*. You need to do two things. First, make the points a different color for each region. Second, add one **gganimate** command to the basic static `ggplot()` call.
 
 Here is an example: https://rpubs.com/ruchajoshi/regional_poverty
+
+```{r}
+anim <- p + 
+  transition_manual(frames = region) + 
+  shadow_mark() + 
+  enter_grow() + 
+  enter_fade()
+
+anim
+```
+
 
 
 # Scene 6
@@ -80,11 +110,25 @@ Third, does this suggest that `good_education` causes less poverty? If you chang
 Fourth, recall the Rubin Causal Model and potential outcomes. Write down the units, the treatments, and the outcomes. Define the causal effect of `good_education` on poverty rate. What is the fundamental problem of causal inference?
 
 Fifth, how do the above answers change if, instead of using `good_education`, we use `less_than_hs` instead?
+```{r}
+county %>% 
+  mutate(
+    good_education = ifelse(
+      less_than_hs < 13, 1, 0
+    )
+  ) %>% 
+  group_by(good_education) %>% 
+  summarise(avg_pov = mean(poverty))
+```
 
 
 # Scene 8
 
 **Prompt** Using the `lm()` function, fit a model with this data in which `poverty` is the dependent variable and `less_than_hs` is the independent variable. Save the resulting object as `poverty_model`. Then, use the tidy() function found in section 11.1.2 to obtain the regression parameters. You should have a 2x7 regression table with terms of (Intercept) and `less_than_hs`, as well as an estimate, std.error, statistic, p.value, conf.low, and conf.high. Write one sentence explaining what the intercept means and one sentence about what the slope means.
+```{r}
+model <- lm(formula = poverty ~ less_than_hs, data = county)
+model %>% tidy(conf.int = TRUE)
+```
 
 
 # Scene 9
